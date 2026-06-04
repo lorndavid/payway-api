@@ -1,0 +1,7 @@
+Flask
+requests
+reportlab
+gunicorn
+# qrcode + pillow only needed for local QR fallback in web UI when download_qr not present
+qrcode
+pillow
