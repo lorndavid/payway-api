@@ -1,515 +1,735 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Lorn David • Pay with KHQR</title>
-
-<script src="https://cdn.tailwindcss.com"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Lorn David · KHQR</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* Tailwind will handle most, but keep some custom */
-.loading {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-radius: 50%;
-    border-top-color: #fff;
-    animation: spin 0.8s linear infinite;
-    vertical-align: middle;
-    margin-right: 6px;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #f6f8fc;
+  --white:       #ffffff;
+  --aba:         #003087;
+  --aba-gradient: linear-gradient(135deg, #003087 0%, #001c55 100%);
+  --aba-light:   rgba(0, 48, 135, 0.06);
+  --aba-md:      #004ab3;
+  --green:       #10b981;
+  --green-bg:    #f0fdf4;
+  --green-bd:    #bbf7d0;
+  --red:         #ef4444;
+  --amber:       #f59e0b;
+  --amber-bg:    #fffbeb;
+  --amber-bd:    #fef3c7;
+  --text:        #0f172a;
+  --muted:       #64748b;
+  --border:      #e2e8f0;
+  --font:        'DM Sans', system-ui, -apple-system, sans-serif;
+  --r:           24px;
+  --shadow-lg:   0 20px 30px -10px rgba(0, 48, 135, 0.08), 0 1px 3px rgba(0,0,0,0.02);
+  --transition:  all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Full Height Core Structure ── */
+html, body {
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh; /* Uses dynamic viewport height for mobile */
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.app {
+  width: 100%;
+  max-width: 440px;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Screen States ── */
+.screen { display: none; width: 100%; height: 100%; }
+.screen.active {
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-.timer {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+@keyframes pulseBlink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.92); } }
+@keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes drawCheck { from { stroke-dashoffset: 60; } to { stroke-dashoffset: 0; } }
+
+/* ── Card Styling (Mobile First) ── */
+.card {
+  background: var(--white);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
 }
 
-/* Legacy / old test UI styles (now safely inside <style> so they don't render as visible text) */
-.qr-box{ margin-top:20px; text-align:center; }
-.qr-box img{ width:280px; max-width:100%; border-radius:8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-.status{ margin-top:15px; text-align:center; font-weight:bold; font-size:15px; }
-.waiting{ color:#e65100; }
-.success{ color:#2e7d32; }
-.error{ color:#c62828; }
-.info{ margin-top:10px; text-align:center; }
-.section { margin-top: 20px; }
-.btn-row { display: flex; gap: 10px; margin-top: 12px; }
-.btn-row button { flex: 1; }
-.hidden { display: none !important; }
+/* Desktop layout constraint */
+@media (min-width: 481px) {
+  body { padding: 24px; }
+  .app { height: 85vh; min-height: 700px; max-height: 850px; }
+  .card { 
+    border-radius: var(--r); 
+    box-shadow: var(--shadow-lg); 
+    border: 1px solid rgba(226, 232, 240, 0.7); 
+  }
+}
 
-/* Modern bank-like success styles (ABA inspired - clean, professional, real banking UX) */
-.success-container {
-    text-align: center;
+/* ════════════════════════════════
+   HEADERS (SHARED)
+════════════════════════════════ */
+.m-header, .qr-header, .suc-header, .exp-header {
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
 }
-.success-icon {
-    width: 72px;
-    height: 72px;
-    background: #e8f5e9;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 16px;
+
+/* Main Header */
+.m-header {
+  background: var(--aba-gradient);
+  padding: 32px 28px;
 }
-.success-icon span {
-    font-size: 42px;
-    color: #2e7d32;
+.m-header::before {
+  content: '';
+  position: absolute;
+  right: -40px; top: -40px;
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+  pointer-events: none;
 }
-.success-title {
-    font-size: 22px;
-    font-weight: 700;
-    color: #003087;
-    margin-bottom: 6px;
+.brand { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.brand-flag { font-size: 32px; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
+.brand-name { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+.brand-sub { font-size: 13px; color: rgba(255, 255, 255, 0.6); font-weight: 400; margin-top: 1px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 99px; padding: 6px 14px; font-size: 12px; font-weight: 500; color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
 }
-.success-subtitle {
-    color: #555;
-    font-size: 14px;
-    margin-bottom: 18px;
+.dot-live {
+  width: 8px; height: 8px; background: #10b981; border-radius: 50%;
+  box-shadow: 0 0 8px #10b981; animation: pulseBlink 2s infinite ease-in-out;
 }
-.success-details {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 10px;
-    padding: 14px 16px;
-    text-align: left;
-    margin-bottom: 16px;
-    font-size: 14px;
+
+/* ════════════════════════════════
+   MAIN SCREEN SPECIFICS
+════════════════════════════════ */
+.m-body {
+  padding: 28px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
-.success-details .row {
-    display: flex;
-    justify-content: space-between;
-    padding: 7px 0;
-    border-bottom: 1px solid #eee;
+
+.field-lbl {
+  display: block; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
 }
-.success-details .row:last-child {
-    border-bottom: none;
+.amt-wrap {
+  display: flex; align-items: center; background: #f8fafc;
+  border: 2px solid #e2e8f0; border-radius: 16px; padding: 0 20px;
+  margin-bottom: 16px; transition: var(--transition);
 }
-.success-details .label {
-    color: #666;
+.amt-wrap:focus-within {
+  border-color: var(--aba); box-shadow: 0 0 0 4px rgba(0, 48, 135, 0.1); background: var(--white);
 }
-.success-details .value {
-    font-weight: 600;
-    color: #222;
-    text-align: right;
+.amt-wrap input {
+  flex: 1; min-width: 0; background: none; border: none; outline: none;
+  font-family: var(--font); font-size: 34px; font-weight: 700; color: var(--text);
+  letter-spacing: -0.03em; padding: 16px 0;
 }
-.success-details .amount-row .value {
-    font-size: 17px;
-    color: #2e7d32;
-    font-weight: 700;
+.khr-tag {
+  font-size: 13px; font-weight: 700; color: var(--aba);
+  background: rgba(0, 48, 135, 0.08); padding: 6px 12px; border-radius: 10px; letter-spacing: 0.02em;
 }
-.thank-you-aba {
-    text-align: center;
-    margin: 10px 0 14px;
-    padding: 10px 12px;
-    background: #003087;
-    color: white;
-    border-radius: 8px;
-    font-size: 14.5px;
-    line-height: 1.35;
+
+.presets {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: auto;
 }
-.thank-you-aba strong {
-    display: block;
-    margin-bottom: 2px;
-    font-size: 15px;
+.pre-btn {
+  background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 4px;
+  font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; transition: var(--transition);
+}
+.pre-btn:hover { border-color: var(--aba); color: var(--aba); background: var(--aba-light); }
+
+.m-bottom-actions { margin-top: 24px; }
+.gen-btn {
+  width: 100%; height: 56px; background: var(--aba); border: none; border-radius: 16px;
+  color: #fff; font-family: var(--font); font-size: 16px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  box-shadow: 0 4px 14px rgba(0, 48, 135, 0.25); transition: var(--transition);
+}
+.gen-btn:hover:not(:disabled) { background: #002569; transform: translateY(-1px); }
+.gen-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.spin {
+  width: 20px; height: 20px; border: 2.5px solid rgba(255,255,255,0.2);
+  border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite;
+}
+.status-hint { text-align: center; font-size: 13px; color: var(--muted); min-height: 20px; margin-top: 14px; font-weight: 500; }
+
+.m-footer {
+  border-top: 1px solid var(--border); background: #fafafa; padding: 16px 28px;
+  display: flex; justify-content: space-between; align-items: center; margin-top: auto;
+}
+.m-footer span { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+/* ════════════════════════════════
+   QR SCREEN SPECIFICS
+════════════════════════════════ */
+.qr-header { background: var(--aba-gradient); padding: 24px; }
+.qr-top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.qr-logo { display: flex; align-items: center; gap: 12px; }
+.qr-logo-flag { font-size: 26px; }
+.qr-logo-text { color: #fff; font-size: 16px; font-weight: 700; line-height: 1.2; }
+.qr-logo-text small { display: block; font-size: 11px; font-weight: 400; color: rgba(255,255,255,0.5); margin-top: 1px; }
+.qr-timer-box { text-align: right; }
+.qr-timer-lbl {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: rgba(255,255,255,0.4); margin-bottom: 2px;
+}
+#timer { font-size: 24px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; line-height: 1; }
+#timer.urgent { color: #f87171; animation: pulseBlink 1s infinite; }
+
+.qr-amount-pill {
+  background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px; padding: 14px 20px; display: flex; justify-content: space-between;
+  align-items: center; backdrop-filter: blur(8px);
+}
+.qa-label { font-size: 13px; color: rgba(255, 255, 255, 0.6); font-weight: 500; }
+.qa-value { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+.qa-cur { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.5); margin-left: 2px; }
+
+/* Main flex container for QR */
+.qr-body {
+  padding: 32px 24px 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Pin the QR card to the viewport when QR screen is active so it fills height */
+#qr-screen.active .card {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 24px; /* match body padding on desktop */
+  bottom: 24px;
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  z-index: 30;
+}
+
+/* Allow QR body to scroll internally on small viewports */
+.qr-body {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure actions stay anchored at bottom */
+.qr-bottom-wrap { margin-top: auto; width: 100%; }
+
+.qr-actions { display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; width: 100%; }
+
+.qr-frame {
+  background: #fff; border-radius: 20px; padding: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); border: 1px solid rgba(0,0,0,0.04);
+  display: inline-block; margin-bottom: 24px;
+}
+.qr-frame img { display: block; width: 220px; height: 220px; border-radius: 8px; }
+
+.khqr-divider { display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 20px; }
+.khqr-line { flex: 1; height: 1px; background: var(--border); }
+.khqr-text { font-size: 12px; font-weight: 700; letter-spacing: 0.15em; color: var(--muted); }
+
+.qr-status {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
+  border-radius: 99px; font-size: 14px; font-weight: 600; transition: var(--transition);
+}
+.qr-status.waiting { background: var(--amber-bg); border: 1px solid var(--amber-bd); color: #b45309; }
+.qr-status.scanned { background: var(--green-bg); border: 1px solid var(--green-bd); color: #047857; }
+.blink-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: currentColor;
+  animation: pulseBlink 1.4s infinite ease-in-out;
+}
+
+/* This wrap forces the buttons to anchor to the bottom perfectly */
+.qr-bottom-wrap {
+  margin-top: auto;
+  width: 100%;
+  padding-top: 32px;
+}
+.qr-actions { display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; width: 100%; margin-bottom: 20px; }
+.btn-dl {
+  height: 52px; border-radius: 14px; border: none; background: var(--aba); color: #fff;
+  font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  box-shadow: 0 4px 12px rgba(0,48,135,0.2); transition: var(--transition);
+}
+.btn-dl:hover { background: #002569; transform: translateY(-1px); }
+.btn-cancel {
+  height: 52px; border-radius: 14px; border: 1.5px solid var(--border); background: #fff;
+  color: var(--muted); font-family: var(--font); font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: var(--transition);
+}
+.btn-cancel:hover { border-color: #94a3b8; color: var(--text); background: #f8fafc; }
+.qr-hint { font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; font-weight: 500; }
+
+/* ════════════════════════════════
+   SUCCESS SCREEN SPECIFICS
+════════════════════════════════ */
+.suc-header { background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 40px 24px 32px; text-align: center; }
+.check-ring {
+  width: 68px; height: 68px; border-radius: 50%; background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px; animation: pop .5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.check-ring svg { width: 32px; height: 32px; }
+.check-ring svg polyline {
+  stroke: #fff; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round;
+  fill: none; stroke-dasharray: 60; stroke-dashoffset: 60; animation: drawCheck .4s .3s ease forwards;
+}
+.suc-header h2 { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 6px; }
+.suc-header p { color: rgba(255,255,255,0.7); font-size: 14px; font-weight: 500; }
+
+.suc-body { flex: 1; display: flex; flex-direction: column; }
+.receipt { padding: 12px 28px 24px; }
+.r-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 0; border-bottom: 1px solid #f1f5f9; gap: 16px;
+}
+.r-row:last-of-type { border-bottom: none; }
+.r-lbl { font-size: 14px; color: var(--muted); font-weight: 500; }
+.r-val { font-size: 14px; font-weight: 600; color: var(--text); text-align: right; }
+.r-val.big { font-size: 22px; color: #059669; letter-spacing: -0.02em; }
+.r-val.mono {
+  font-size: 12px; font-family: monospace; font-weight: 600;
+  color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 8px;
+}
+
+.suc-footer { padding: 28px; margin-top: auto; }
+.btn-back {
+  width: 100%; height: 56px; background: #f1f5f9; border: 1.5px solid var(--border);
+  border-radius: 16px; font-family: var(--font); font-size: 15px; font-weight: 600;
+  color: var(--text); cursor: pointer; transition: var(--transition);
+}
+.btn-back:hover { background: #e2e8f0; border-color: #cbd5e1; }
+
+/* ════════════════════════════════
+   EXPIRED SCREEN SPECIFICS
+════════════════════════════════ */
+.exp-header { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 40px 24px 32px; text-align: center; }
+.exp-icon { font-size: 48px; display: block; margin-bottom: 16px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15)); }
+.exp-header h2 { color: #fff; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.exp-header p { color: rgba(255,255,255,0.7); font-size: 14px; line-height: 1.6; }
+.exp-body { flex: 1; display: flex; flex-direction: column; padding: 28px; }
+.btn-regen {
+  width: 100%; height: 56px; background: var(--aba); border: none; border-radius: 16px;
+  color: #fff; font-family: var(--font); font-size: 15px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 48, 135, 0.2); transition: var(--transition); margin-top: auto;
+}
+.btn-regen:hover { background: #002569; }
+
+/* ── Smart Device Scaling ── */
+@media (max-width: 480px) {
+  .m-header, .m-body, .receipt, .suc-footer, .exp-body { padding-left: 20px; padding-right: 20px; }
+  .amt-wrap input { font-size: 28px; }
+  .qr-frame img { width: 200px; height: 200px; }
+}
+@media (max-height: 680px) {
+  .m-header { padding-top: 20px; padding-bottom: 20px; }
+  .m-body { padding-top: 16px; }
+  .suc-header, .exp-header { padding-top: 24px; padding-bottom: 20px; }
+  .qr-frame img { width: 180px; height: 180px; }
 }
 </style>
-
 </head>
+<body>
 
-<body class="bg-zinc-100 min-h-screen font-sans">
-<div class="max-w-md mx-auto pt-8 pb-12 px-4">
-    <!-- Header -->
-    <div class="text-center mb-6">
-        <div class="inline-flex items-center gap-2 bg-white px-4 py-1.5 rounded-full shadow-sm mb-3">
-            <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-            <span class="text-sm font-medium text-zinc-600">Secure • Powered by ABA PayWay</span>
+<div class="app">
+
+  <!-- ── MAIN SCREEN ── -->
+  <div id="main-screen" class="screen active">
+    <div class="card">
+      <div class="m-header">
+        <div class="brand">
+          <span class="brand-flag">🇰🇭</span>
+          <div>
+            <div class="brand-name">Lorn David</div>
+            <div class="brand-sub">Education &amp; Training</div>
+          </div>
         </div>
-        <h1 class="text-3xl font-bold text-[#003087]">Lorn David</h1>
-        <p class="text-zinc-500 text-sm">Education &amp; Training</p>
+        <div class="badge">
+          <span class="dot-live"></span>
+          Secure · ABA PayWay
+        </div>
+      </div>
+
+      <div class="m-body">
+        <label class="field-lbl" for="amount">Enter Amount</label>
+        <div class="amt-wrap">
+          <input id="amount" type="number" value="1000" min="1" inputmode="numeric">
+          <span class="khr-tag">KHR</span>
+        </div>
+
+        <div class="presets">
+          <button class="pre-btn" onclick="setAmt(1000)">1,000</button>
+          <button class="pre-btn" onclick="setAmt(5000)">5,000</button>
+          <button class="pre-btn" onclick="setAmt(10000)">10,000</button>
+          <button class="pre-btn" onclick="setAmt(50000)">50,000</button>
+        </div>
+
+        <div class="m-bottom-actions">
+          <button id="genBtn" class="gen-btn" onclick="generateQR()">
+            <span id="genLabel">Generate KHQR</span>
+          </button>
+          <div id="genStatus" class="status-hint"></div>
+        </div>
+      </div>
+
+      <div class="m-footer">
+        <span>Anajak Fast KHQR</span>
+        <span>Real-time · ABA PayWay</span>
+      </div>
     </div>
+  </div>
 
-    <!-- MAIN SCREEN -->
-    <div id="main-screen" class="bg-white rounded-3xl shadow-xl p-6 border border-zinc-200">
-        <div class="text-center mb-6">
-            <div class="mx-auto w-14 h-14 bg-[#003087] rounded-2xl flex items-center justify-center mb-4">
-                <span class="text-white text-3xl">🇰🇭</span>
+  <!-- ── QR SCREEN ── -->
+  <div id="qr-screen" class="screen">
+    <div class="card">
+      <div class="qr-header">
+        <div class="qr-top-row">
+          <div class="qr-logo">
+            <span class="qr-logo-flag">🇰🇭</span>
+            <div class="qr-logo-text">
+              Lorn David
+              <small>by D.LORN · Education</small>
             </div>
-            <h2 class="text-2xl font-semibold text-zinc-800">Pay with KHQR</h2>
-            <p class="text-sm text-zinc-500 mt-1">Scan with ABA Mobile or any KHQR app</p>
+          </div>
+          <div class="qr-timer-box">
+            <div class="qr-timer-lbl">Expires in</div>
+            <div id="timer">03:00</div>
+          </div>
+        </div>
+        <div class="qr-amount-pill">
+          <span class="qa-label">Amount to Pay</span>
+          <div>
+            <span class="qa-value" id="qr-amount-val">1,000</span>
+            <span class="qa-cur">KHR</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="qr-body">
+        <div class="qr-frame" id="qr-frame">
+          <!-- QR injected here -->
         </div>
 
-        <div class="space-y-4">
-            <div>
-                <label class="text-xs font-medium text-zinc-500 tracking-wider">AMOUNT (KHR)</label>
-                <div class="relative mt-1">
-                    <input id="amount" type="number" value="1000" 
-                           class="w-full text-3xl font-semibold tracking-tight border-2 border-zinc-200 focus:border-[#003087] rounded-2xl px-5 py-4 outline-none">
-                    <div class="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-400 text-sm font-medium">KHR</div>
-                </div>
-            </div>
+        <div class="khqr-divider">
+          <div class="khqr-line"></div>
+          <span class="khqr-text">KHQR</span>
+          <div class="khqr-line"></div>
+        </div>
 
-            <button id="genBtn" onclick="generateQR()"
-                    class="w-full h-14 bg-[#003087] hover:bg-[#002266] active:bg-black transition-all text-white text-lg font-semibold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20">
-                <span>Generate KHQR</span>
+        <div id="qr-status" class="qr-status waiting">
+          <span class="blink-dot"></span>
+          Waiting for payment…
+        </div>
+
+        <!-- This wrapper anchors the buttons dynamically to the bottom -->
+        <div class="qr-bottom-wrap">
+          <div class="qr-actions">
+            <button class="btn-dl" onclick="downloadQR()">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="margin-right:2px"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              Download QR
             </button>
-            
-            <div id="generateStatus" class="text-center text-xs text-zinc-500 h-4"></div>
+            <button class="btn-cancel" onclick="cancelPayment()">Cancel</button>
+          </div>
+          <div class="qr-hint">Valid for 3 minutes · Scan with ABA Mobile or any KHQR app</div>
         </div>
-
-        <div class="mt-6 text-[10px] text-center text-zinc-400">
-            Powered by Anajak API • Real-time ABA PayWay
-        </div>
+      </div>
     </div>
+  </div>
 
-    <!-- QR SCREEN -->
-    <div id="qr-screen" class="hidden bg-white rounded-3xl shadow-xl border border-zinc-200 overflow-hidden">
-        <div class="bg-[#003087] text-white px-6 py-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="font-semibold" id="qr-merchant">Lorn David by D.LORN</div>
-                    <div class="text-xs opacity-75" id="qr-amount">1,000 KHR</div>
-                </div>
-                <div class="text-right">
-                    <div class="text-[10px] opacity-75">EXPIRES IN</div>
-                    <div id="timer" class="timer text-2xl font-bold tracking-tighter">03:00</div>
-                </div>
-            </div>
+  <!-- ── SUCCESS SCREEN ── -->
+  <div id="success-screen" class="screen">
+    <div class="card">
+      <div class="suc-header">
+        <div class="check-ring">
+          <svg viewBox="0 0 36 36">
+            <polyline points="6,18 14,26 30,10"/>
+          </svg>
+        </div>
+        <h2>Payment Successful</h2>
+        <p>Transaction complete</p>
+      </div>
+
+      <div class="suc-body">
+        <div class="receipt">
+          <div class="r-row">
+            <span class="r-lbl">Paid to</span>
+            <span class="r-val" id="s-merchant">Lorn David</span>
+          </div>
+          <div class="r-row">
+            <span class="r-lbl">Amount</span>
+            <span class="r-val big" id="s-amount">1,000 KHR</span>
+          </div>
+          <div class="r-row">
+            <span class="r-lbl">Reference</span>
+            <span class="r-val mono" id="s-ref">—</span>
+          </div>
+          <div class="r-row">
+            <span class="r-lbl">Date &amp; Time</span>
+            <span class="r-val" id="s-time">—</span>
+          </div>
         </div>
 
-        <div class="p-6 text-center">
-            <div id="qr-image-container" class="mx-auto mb-5 bg-white p-3 rounded-2xl shadow-inner border border-zinc-100 inline-block">
-                <!-- QR image injected here -->
-            </div>
-
-            <div class="flex gap-3 mb-5">
-                <button onclick="downloadQR()" 
-                        class="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 transition text-white text-sm font-semibold rounded-2xl flex items-center justify-center gap-2">
-                    ⬇ Download QR
-                </button>
-                <button onclick="cancelPayment()" 
-                        class="flex-1 h-11 border border-zinc-300 hover:bg-zinc-50 active:bg-zinc-100 text-sm font-medium rounded-2xl text-zinc-700">
-                    Cancel
-                </button>
-            </div>
-
-            <div id="qr-status" 
-                 class="text-sm font-medium text-amber-600 bg-amber-50 border border-amber-100 rounded-2xl py-2.5">
-                Waiting for payment scan...
-            </div>
-
-            <div class="text-[10px] text-zinc-400 mt-4">
-                This QR is valid for 3 minutes. Do not close this page.
-            </div>
+        <div class="suc-footer">
+          <button class="btn-back" onclick="doReset()">← Back to Main</button>
         </div>
+      </div>
     </div>
+  </div>
 
-    <!-- SUCCESS SCREEN - Simple ABA PayWay style -->
-    <div id="success-screen" class="hidden bg-white rounded-3xl shadow-xl border border-emerald-200 overflow-hidden">
-        <div class="bg-emerald-600 text-white px-6 py-5 text-center">
-            <div class="mx-auto w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2">
-                <span class="text-3xl">✓</span>
-            </div>
-            <div class="text-xl font-bold">Payment Successful</div>
-            <div class="text-emerald-100 text-sm">Thank you for your support</div>
-        </div>
-
-        <div class="p-6 space-y-4 text-sm">
-            <div class="flex justify-between py-1 border-b">
-                <span class="text-zinc-500">Paid to</span>
-                <span class="font-semibold text-zinc-800" id="success-merchant">Lorn David by D.LORN</span>
-            </div>
-            <div class="flex justify-between py-1 border-b">
-                <span class="text-zinc-500">Amount</span>
-                <span class="font-bold text-lg text-emerald-600" id="success-amount">1,000 KHR</span>
-            </div>
-            <div class="flex justify-between py-1 border-b">
-                <span class="text-zinc-500">Reference</span>
-                <span class="font-mono text-xs bg-zinc-100 px-2 py-0.5 rounded" id="success-tranid"></span>
-            </div>
-            <div class="flex justify-between py-1">
-                <span class="text-zinc-500">Time</span>
-                <span id="success-time" class="text-zinc-600"></span>
-            </div>
-        </div>
-
-        <div class="p-6 pt-0">
-            <button onclick="startNewPayment()" 
-                    class="w-full h-12 bg-zinc-900 hover:bg-black transition text-white font-semibold rounded-2xl">
-                Back to Main Page
-            </button>
-        </div>
+  <!-- ── EXPIRED SCREEN ── -->
+  <div id="expired-screen" class="screen">
+    <div class="card">
+      <div class="exp-header">
+        <span class="exp-icon">⏰</span>
+        <h2>QR Expired</h2>
+        <p>This QR code has timed out.<br>Please generate a new one to continue.</p>
+      </div>
+      <div class="exp-body">
+        <button class="btn-regen" onclick="doReset()">Generate New QR</button>
+      </div>
     </div>
+  </div>
 
-    <!-- EXPIRED SCREEN - ABA PayWay style -->
-    <div id="expired-screen" class="hidden bg-white rounded-3xl shadow-xl border border-red-200 overflow-hidden">
-        <div class="bg-red-600 text-white px-6 py-5 text-center">
-            <div class="text-4xl mb-1">⏰</div>
-            <div class="text-xl font-bold">QR Code Expired</div>
-        </div>
-
-        <div class="p-6 text-center space-y-3">
-            <p class="text-zinc-600">This payment QR has expired.<br>Please generate a new one.</p>
-            
-            <button onclick="startNewPayment()" 
-                    class="w-full h-12 bg-red-600 hover:bg-red-700 active:bg-red-800 transition text-white font-semibold rounded-2xl mt-2">
-                Generate New QR
-            </button>
-        </div>
-    </div>
-
-    <div class="text-center mt-6 text-[10px] text-zinc-400">
-        Lorn David • Anajak Fast KHQR
-    </div>
 </div>
 
 <script>
-tailwind.config = {
-    theme: {
-        extend: {
-            colors: {
-                'aba-blue': '#003087'
-            }
-        }
-    }
-};
+let tranId = '', clientId = '';
+let evtSrc = null, timerInt = null;
+let genAbort = null; // AbortController for in-flight generate requests
+let pay = {};
 
-// Global state
-let tranId = "";
-let clientId = "";
-let eventSource = null;
-let currentPayment = {};
-let timerInterval = null;
-
-function showScreen(screenId) {
-    ['main-screen', 'qr-screen', 'success-screen', 'expired-screen'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
-    });
-    const target = document.getElementById(screenId);
-    if (target) target.classList.remove('hidden');
+/* ── Screen switch ── */
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function resetAll() {
-    if (eventSource) {
-        eventSource.close();
-        eventSource = null;
-    }
-    if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-    }
-    tranId = "";
-    clientId = "";
-    currentPayment = {};
-    
-    const amountInput = document.getElementById('amount');
-    if (amountInput) amountInput.disabled = false;
-    
-    const genBtn = document.getElementById('genBtn');
-    if (genBtn) {
-        genBtn.disabled = false;
-        genBtn.innerHTML = '<span>Generate KHQR</span>';
-    }
-    const statusLine = document.getElementById('generateStatus');
-    if (statusLine) statusLine.textContent = '';
-    
-    showScreen('main-screen');
+/* ── Helpers ── */
+function setAmt(v) {
+  const inp = document.getElementById('amount');
+  if (inp) inp.value = v;
 }
 
+/* ── Reset ── */
+function doReset() {
+  if (evtSrc)   { evtSrc.close(); evtSrc = null; }
+  if (timerInt) { clearInterval(timerInt); timerInt = null; }
+  if (genAbort) { try { genAbort.abort(); } catch(_){} genAbort = null; }
+  tranId = ''; clientId = ''; pay = {};
+
+  const inp = document.getElementById('amount');
+  const btn = document.getElementById('genBtn');
+  const lbl = document.getElementById('genLabel');
+  const st  = document.getElementById('genStatus');
+  if (inp) inp.disabled = false;
+  if (btn) btn.disabled = false;
+  if (lbl) lbl.textContent = 'Generate KHQR';
+  if (st)  st.textContent = '';
+  show('main-screen');
+}
+
+/* ── Generate ── */
 async function generateQR() {
-    const btn = document.getElementById('genBtn');
-    const statusLine = document.getElementById('generateStatus');
-    const amountInput = document.getElementById('amount');
-    const amount = parseFloat(amountInput.value);
+  const inp = document.getElementById('amount');
+  const amount = parseFloat(inp.value);
+  if (!amount || amount <= 0) { alert('Please enter a valid amount'); return; }
 
-    if (!amount || amount <= 0) {
-        alert("Please enter a valid amount");
-        return;
+  const btn = document.getElementById('genBtn');
+  const lbl = document.getElementById('genLabel');
+  const st  = document.getElementById('genStatus');
+
+  btn.disabled = true;
+  lbl.innerHTML = '<span class="spin"></span> Generating…';
+  st.textContent = 'Connecting to ABA PayWay…';
+  inp.disabled = true;
+  let ok = false;
+  // create an AbortController so we can cancel the request if the user presses Cancel
+  genAbort = new AbortController();
+  try {
+    const res  = await fetch('/generate', {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount }),
+      signal: genAbort.signal
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed');
+
+    pay = {
+      merchant:  data.merchant || 'Lorn David',
+      amount:    data.amount   || amount,
+      currency:  data.currency || 'KHR',
+      tranId:    data.tran_id,
+      clientId:  data.client_id,
+      qrUrl:     data.qr_url  || null,
+      expireSec: data.expire_in_sec || 180
+    };
+    tranId   = data.tran_id;
+    clientId = data.client_id;
+
+    /* Populate QR screen */
+    document.getElementById('qr-amount-val').textContent = Number(pay.amount).toLocaleString();
+
+    const frame = document.getElementById('qr-frame');
+    frame.innerHTML = pay.qrUrl
+      ? `<img src="${pay.qrUrl}" alt="KHQR Code">`
+      : `<div style="width:220px;height:220px;display:flex;align-items:center;justify-content:center;background:#f4f7fd;border-radius:6px;font-size:13px;color:#9ca3af;">QR unavailable</div>`;
+
+    /* Reset status badge */
+    const badge = document.getElementById('qr-status');
+    badge.className = 'qr-status waiting';
+    badge.innerHTML = '<span class="blink-dot"></span> Waiting for payment…';
+
+    show('qr-screen');
+    startTimer(pay.expireSec);
+    startStream();
+    ok = true;
+  } catch(e) {
+    // If request was aborted by user, suppress error UI/alerts and simply return
+    if (e && (e.name === 'AbortError' || (e.message && e.message.toLowerCase().includes('aborted')))) {
+      if (st) st.textContent = '';
+      // caller (doReset) already restored UI
+      return;
     }
+    st.textContent = 'Failed — please try again.';
+    setTimeout(() => { if (st) st.textContent = ''; }, 3000);
+    alert('Could not generate QR. Please try again.');
+  } finally {
+    // clear abort controller reference if still set
+    try { genAbort = null; } catch(_) { genAbort = null; }
+    if (!ok) {
+      btn.disabled = false;
+      lbl.textContent = 'Generate KHQR';
+      inp.disabled = false;
+    }
+  }
+}
 
-    btn.disabled = true;
-    btn.innerHTML = `<span class="loading"></span> Generating...`;
-    statusLine.textContent = "Contacting Anajak...";
-    amountInput.disabled = true;
+/* ── Timer ── */
+function startTimer(secs) {
+  const el = document.getElementById('timer');
+  let left = secs;
+  if (timerInt) clearInterval(timerInt);
 
-    let generateSucceeded = false;
+  const fmt = n => String(Math.floor(n)).padStart(2,'0');
+  timerInt = setInterval(() => {
+    left--;
+    el.textContent = `${fmt(left/60)}:${fmt(left%60)}`;
+    el.classList.toggle('urgent', left <= 30);
+    if (left <= 0) { clearInterval(timerInt); timerInt = null; showExpired(); }
+  }, 1000);
+}
 
+/* ── SSE stream ── */
+function startStream() {
+  if (evtSrc) evtSrc.close();
+  evtSrc = new EventSource(
+    `/status-stream?tran_id=${encodeURIComponent(tranId)}&client_id=${encodeURIComponent(clientId)}`
+  );
+  evtSrc.onmessage = e => {
     try {
-        const res = await fetch("/generate", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ amount })
-        });
-        const data = await res.json();
-
-        if (!data.success) throw new Error(data.error || "Failed");
-
-        currentPayment = {
-            merchant: data.merchant || "Lorn David by D.LORN",
-            amount: data.amount || amount,
-            currency: data.currency || "KHR",
-            tranId: data.tran_id,
-            clientId: data.client_id,
-            qrUrl: data.qr_url || null,
-            expireSec: data.expire_in_sec || 180
-        };
-
-        tranId = data.tran_id;
-        clientId = data.client_id;
-
-        // Populate QR screen (simple KHQR card like real ABA)
-        document.getElementById('qr-merchant').textContent = currentPayment.merchant;
-        document.getElementById('qr-amount').textContent = `${currentPayment.amount} ${currentPayment.currency}`;
-
-        const container = document.getElementById('qr-image-container');
-        container.innerHTML = currentPayment.qrUrl 
-            ? `<img src="${currentPayment.qrUrl}" class="w-[260px] max-w-full rounded-xl" alt="KHQR">`
-            : `<div class="w-[260px] h-[260px] bg-zinc-200 flex items-center justify-center text-xs text-zinc-500">QR not available</div>`;
-
-        showScreen('qr-screen');
-
-        // Start 3 minute timer
-        startExpireTimer(currentPayment.expireSec);
-
-        // Start real-time SSE for fast payment detection
-        startStatusStream();
-
-        statusLine.textContent = "";
-        generateSucceeded = true;
-
-    } catch (e) {
-        console.error(e);
-        statusLine.textContent = "Error. Please try again.";
-        setTimeout(() => statusLine.textContent = "", 2500);
-        alert("Failed to generate. Anajak can be slow — try again.");
-    } finally {
-        // IMPORTANT for smoothness: only restore the generate controls on error/failure paths.
-        // On success we already switched to #qr-screen (main controls are hidden inside #main-screen).
-        // Re-enabling them here can cause micro state flicker. resetAll() will restore them cleanly later.
-        if (!generateSucceeded) {
-            btn.disabled = false;
-            btn.innerHTML = '<span>Generate KHQR</span>';
-            amountInput.disabled = false;
-        }
-    }
+      const d = JSON.parse(e.data);
+      if (d.error) return;
+      const badge = document.getElementById('qr-status');
+      if (d.qr_scanned && !d.payment_approved) {
+        badge.className = 'qr-status scanned';
+        badge.innerHTML = '<span class="blink-dot"></span> QR scanned — confirming…';
+      }
+      if (d.payment_approved) {
+        if (evtSrc)   { evtSrc.close(); evtSrc = null; }
+        if (timerInt) { clearInterval(timerInt); timerInt = null; }
+        showSuccess();
+      }
+    } catch(_) {}
+  };
 }
 
-function startExpireTimer(seconds) {
-    const timerEl = document.getElementById('timer');
-    let remaining = seconds;
-
-    if (timerInterval) clearInterval(timerInterval);
-
-    timerInterval = setInterval(() => {
-        remaining--;
-        const min = Math.floor(remaining / 60);
-        const sec = remaining % 60;
-        timerEl.textContent = `${min.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
-
-        if (remaining <= 0) {
-            clearInterval(timerInterval);
-            timerInterval = null;
-            showExpired();
-        }
-    }, 1000);
-}
-
-function downloadQR() {
-    if (!currentPayment.qrUrl) return alert("QR not available");
-
-    const a = document.createElement('a');
-    a.href = currentPayment.qrUrl;
-    a.download = `khqr-lorndavid-${currentPayment.amount}KHR.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-}
-
-function startStatusStream() {
-    if (eventSource) eventSource.close();
-
-    const url = `/status-stream?tran_id=${encodeURIComponent(tranId)}&client_id=${encodeURIComponent(clientId)}`;
-    eventSource = new EventSource(url);
-
-    const statusEl = document.getElementById('qr-status');
-
-    eventSource.onmessage = (e) => {
-        try {
-            const data = JSON.parse(e.data);
-            if (data.error) return;
-
-            if (data.qr_scanned && !data.payment_approved) {
-                statusEl.textContent = "QR Scanned by customer ✓";
-                statusEl.className = "text-sm font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-2xl py-2.5";
-            }
-
-            if (data.payment_approved) {
-                if (eventSource) {
-                    eventSource.close();
-                    eventSource = null;
-                }
-                if (timerInterval) {
-                    clearInterval(timerInterval);
-                    timerInterval = null;
-                }
-                showSuccess();
-            }
-        } catch(err) {}
-    };
-
-    eventSource.onerror = () => {
-        // Let it retry or fall back gracefully
-    };
-}
-
+/* ── Show success ── */
 function showSuccess() {
-    document.getElementById('success-merchant').textContent = currentPayment.merchant;
-    document.getElementById('success-amount').textContent = `${currentPayment.amount} ${currentPayment.currency}`;
-    document.getElementById('success-tranid').textContent = currentPayment.tranId || '';
-    document.getElementById('success-time').textContent = new Date().toLocaleString();
-
-    showScreen('success-screen');
+  document.getElementById('s-merchant').textContent = pay.merchant;
+  document.getElementById('s-amount').textContent =
+    `${Number(pay.amount).toLocaleString()} ${pay.currency}`;
+  document.getElementById('s-ref').textContent = pay.tranId || '—';
+  document.getElementById('s-time').textContent = new Date().toLocaleString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+  show('success-screen');
 }
 
+/* ── Show expired ── */
 function showExpired() {
-    if (eventSource) {
-        eventSource.close();
-        eventSource = null;
-    }
-    showScreen('expired-screen');
+  if (evtSrc) { evtSrc.close(); evtSrc = null; }
+  show('expired-screen');
 }
 
+/* ── Cancel ── */
 function cancelPayment() {
-    if (eventSource) {
-        eventSource.close();
-        eventSource = null;
-    }
-    if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-    }
-    showScreen('main-screen');
+  // Fully reset UI and abort any in-flight operations
+  doReset();
 }
 
-function startNewPayment() {
-    resetAll();
+/* ── Download QR ── */
+function downloadQR() {
+  if (!pay.qrUrl) return alert('QR not available');
+  const a = document.createElement('a');
+  a.href = pay.qrUrl;
+  a.download = `khqr-lorndavid-${pay.amount}KHR.png`;
+  document.body.appendChild(a); a.click(); a.remove();
 }
 
-// Enter key support
-document.addEventListener("DOMContentLoaded", () => {
-    const amountInput = document.getElementById("amount");
-    if (amountInput) {
-        amountInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") generateQR();
-        });
-    }
-    
-    // Initial focus
-    if (amountInput) amountInput.focus();
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('amount');
+  if (inp) {
+    inp.addEventListener('keypress', e => { if (e.key === 'Enter') generateQR(); });
+    setTimeout(() => inp.focus(), 200);
+  }
 });
 </script>
-
 </body>
 </html>

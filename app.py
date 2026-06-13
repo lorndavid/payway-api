@@ -13,6 +13,7 @@ from reportlab.lib.units import mm
 app = Flask(__name__)
 
 ABA_LINK = "https://link.payway.com.kh/ABAPAYFB405176Y"
+session = requests.Session()
 
 
 @app.route("/")
@@ -38,13 +39,13 @@ def generate():
         api_response = None
         for attempt in range(2):
             try:
-                api_response = requests.post(
+                api_response = session.post(
                     "https://api.anajak.site/api/create-qr",
                     json={
                         "url": ABA_LINK,
                         "amount": float(amount)
                     },
-                    timeout=20
+                    timeout=12
                 )
                 data = api_response.json()
                 if api_response.status_code == 200:
@@ -52,8 +53,7 @@ def generate():
                 last_err = data
             except Exception as e:
                 last_err = str(e)
-            if attempt == 0:
-                time.sleep(0.6)
+                
 
         if not api_response or api_response.status_code != 200:
             return jsonify({"success": False, "error": last_err or "upstream error"}), 400
@@ -88,16 +88,15 @@ def generate():
         download_qr = data.get("download_qr")
         if download_qr:
             result["qr_url"] = download_qr
-            # Do NOT include heavy base64 unless explicitly needed
         else:
-            # Fallback: generate locally (kept for compatibility)
+            # Fallback: generate locally if official QR URL is missing
             import qrcode
             import base64
             from io import BytesIO
             qr = qrcode.make(qr_string or "")
             buffer = BytesIO()
             qr.save(buffer, format="PNG")
-            result["qr"] = base64.b64encode(buffer.getvalue()).decode()
+            result["qr_url"] = "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode()
 
         return jsonify(result)
 
@@ -118,13 +117,13 @@ def check_payment():
         if not tran_id:
             return jsonify({"success": False, "error": "tran_id required"}), 400
 
-        api_response = requests.post(
+        api_response = session.post(
             "https://api.anajak.site/api/check-status",
             json={
                 "tran_id": tran_id,
                 "client_id": client_id
             },
-            timeout=15
+            timeout=10
         )
 
         return jsonify(api_response.json())
@@ -271,7 +270,7 @@ def status_stream():
 
         for i in range(max_checks):
             try:
-                resp = requests.post(
+                resp = session.post(
                     "https://api.anajak.site/api/check-status",
                     json={"tran_id": tran_id, "client_id": client_id},
                     timeout=8
@@ -298,7 +297,7 @@ def status_stream():
                 # Send error but keep trying
                 yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
-            time.sleep(0.8)  # faster internal polling (0.8s) for quicker scan/approval detection while still polite to upstream
+            time.sleep(0.5)  # faster internal polling for quicker scan/approval detection while still polite to upstream
 
         # Final event
         yield "data: {\"done\": true}\n\n"
