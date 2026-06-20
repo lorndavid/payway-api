@@ -306,6 +306,9 @@
       <span id="btnLabel">Generate Payment</span>
     </button>
     
+    <!-- QR Display Area -->
+    <div id="qr-frame" style="display:none; background: white; border-radius: 20px; padding: 20px; text-align: center; margin-top: 20px;"></div>
+    
     <!-- Security Badge -->
     <div class="security-badge">
       <span class="security-icon">✓</span>
@@ -338,7 +341,7 @@ async function proceedToCheckout() {
   btnLabel.innerHTML = '<span class="loader"></span> Processing…';
   
   try {
-    // Generate KHQR from backend (using Anajak API)
+    // Generate KHQR from backend (using Anajak API + your ABA link)
     const response = await fetch('/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -351,28 +354,8 @@ async function proceedToCheckout() {
       throw new Error(data.error || 'Failed to generate payment');
     }
     
-    // Prepare checkout data
-    const checkoutData = {
-      form_url: 'https://checkout.payway.com.kh',
-      merchant_id: 'MERCHANT_ID', // Replace with your merchant ID
-      tran_id: data.tran_id,
-      client_id: data.client_id,
-      amount: amount.toString(),
-      currency: 'KHR',
-      payment_option: method === 'khqr' ? 'abapay_khqr' : 'abapay',
-      onSuccess: function(result) {
-        console.log('Payment successful:', result);
-        alert('Payment completed successfully!');
-        window.location.href = '/success?tran_id=' + data.tran_id;
-      },
-      onError: function(error) {
-        console.log('Payment error:', error);
-        alert('Payment failed. Please try again.');
-      }
-    };
-    
-    // Trigger ABA checkout
-    AbaPayway.checkout(checkoutData);
+    // Show success with QR and details
+    showPaymentReady(data, method);
     
   } catch (error) {
     console.error('Checkout error:', error);
@@ -381,6 +364,82 @@ async function proceedToCheckout() {
     btn.disabled = false;
     btnLabel.textContent = 'Generate Payment';
   }
+}
+
+function showPaymentReady(data, method) {
+  // Show QR code and payment details
+  const qrFrame = document.getElementById('qr-frame');
+  if (!qrFrame) {
+    const section = document.createElement('div');
+    section.id = 'qr-frame';
+    section.style.cssText = 'background: white; border-radius: 20px; padding: 20px; text-align: center; margin-top: 20px;';
+    
+    if (data.qr_url) {
+      section.innerHTML = `
+        <img src="${data.qr_url}" alt="KHQR Code" style="width: 200px; height: 200px; border-radius: 8px;">
+        <div style="margin-top: 16px; font-size: 14px; color: #64748b;">
+          <p>🇰🇭 <strong>Scan with ABA Mobile</strong></p>
+          <p style="font-size: 12px; color: #999;">Transaction ID: ${data.tran_id}</p>
+        </div>
+      `;
+    } else {
+      section.innerHTML = '<div style="color: #999;">QR not available</div>';
+    }
+    
+    document.querySelector('.body').appendChild(section);
+  } else {
+    if (data.qr_url) {
+      qrFrame.innerHTML = `
+        <img src="${data.qr_url}" alt="KHQR Code" style="width: 200px; height: 200px; border-radius: 8px;">
+        <div style="margin-top: 16px; font-size: 14px; color: #64748b;">
+          <p>🇰🇭 <strong>Scan with ABA Mobile</strong></p>
+          <p style="font-size: 12px; color: #999;">Transaction ID: ${data.tran_id}</p>
+        </div>
+      `;
+    }
+  }
+  
+  // Scroll to QR
+  setTimeout(() => {
+    document.getElementById('qr-frame').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 300);
+  
+  // Check payment status every 2 seconds
+  checkPaymentStatus(data.tran_id, data.client_id);
+}
+
+async function checkPaymentStatus(tranId, clientId) {
+  const maxAttempts = 90; // 3 minutes
+  let attempts = 0;
+  
+  const checkInterval = setInterval(async () => {
+    attempts++;
+    
+    try {
+      const response = await fetch('/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tran_id: tranId, client_id: clientId })
+      });
+      
+      const data = await response.json();
+      const meta = data.meta || {};
+      
+      if (meta.payment_approved) {
+        clearInterval(checkInterval);
+        alert('✅ Payment Successful!');
+        location.href = '/success?tran_id=' + tranId;
+        return;
+      }
+      
+      if (attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        alert('⏱️ Payment timeout. Please try again.');
+      }
+    } catch (error) {
+      console.error('Status check error:', error);
+    }
+  }, 2000);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
