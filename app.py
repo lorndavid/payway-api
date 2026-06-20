@@ -12,7 +12,8 @@ from reportlab.lib.units import mm
 
 app = Flask(__name__, static_folder='static')
 
-ABA_LINK = "https://link.payway.com.kh/ABAPAYFB405176Y"
+# Your ABA PayWay Link - used by Anajak API to generate KHQR
+ABA_LINK = os.environ.get("ABA_LINK", "https://link.payway.com.kh/ABAPAYbS459658g")
 session = requests.Session()
 
 
@@ -25,6 +26,17 @@ def home():
 def checkout():
     """ABA KHQR Official Checkout - Full Payway Integration"""
     return render_template("checkout.html")
+
+
+@app.route("/success")
+def success():
+    """Success page after payment"""
+    tran_id = request.args.get("tran_id", "")
+    return jsonify({
+        "status": "success",
+        "message": "Payment completed successfully",
+        "tran_id": tran_id
+    })
 
 
 @app.route("/static/<path:path>")
