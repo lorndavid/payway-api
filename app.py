@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, request, jsonify, Response, send_from_directory
 import requests
 import time
 import datetime
@@ -10,7 +10,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor
 from reportlab.lib.units import mm
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 
 ABA_LINK = "https://link.payway.com.kh/ABAPAYFB405176Y"
 session = requests.Session()
@@ -19,6 +19,18 @@ session = requests.Session()
 @app.route("/")
 def home():
     return render_template("index.html")
+
+
+@app.route("/checkout")
+def checkout():
+    """ABA KHQR Official Checkout - Full Payway Integration"""
+    return render_template("checkout.html")
+
+
+@app.route("/static/<path:path>")
+def send_static(path):
+    """Serve static files (CSS, JS, etc.)"""
+    return send_from_directory('static', path)
 
 
 @app.route("/generate", methods=["POST"])
