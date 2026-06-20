@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ABA KHQR Checkout · Secure Payment</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --aba: #003087;
+      --aba-light: rgba(0, 48, 135, 0.06);
+      --green: #10b981;
+      --bg: #f6f8fc;
+      --white: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --font: 'DM Sans', system-ui, -apple-system, sans-serif;
+    }
+    
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+    }
+    
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 500px;
+      background: var(--white);
+      border-radius: 20px;
+      box-shadow: 0 20px 30px rgba(0, 48, 135, 0.08);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #003087 0%, #001c55 100%);
+      padding: 32px 24px;
+      color: white;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+    
+    .header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    
+    .body {
+      padding: 32px 24px;
+    }
+    
+    .form-group {
+      margin-bottom: 24px;
+    }
+    
+    .label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    
+    .input-group {
+      display: flex;
+      align-items: center;
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 0 16px;
+    }
+    
+    .input-group input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      font-size: 28px;
+      font-weight: 700;
+      padding: 16px 0;
+      font-family: var(--font);
+    }
+    
+    .currency {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--aba);
+      background: rgba(0, 48, 135, 0.08);
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+    
+    .presets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    
+    .preset-btn {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s;
+      font-family: var(--font);
+    }
+    
+    .preset-btn:hover {
+      border-color: var(--aba);
+      color: var(--aba);
+      background: var(--aba-light);
+    }
+    
+    .payment-methods {
+      margin: 24px 0;
+      padding: 24px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .method {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      margin-bottom: 12px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+    
+    .method:last-child {
+      margin-bottom: 0;
+    }
+    
+    .method input[type="radio"] {
+      margin-right: 12px;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    
+    .method:has(input:checked) {
+      border-color: var(--aba);
+      background: var(--aba-light);
+    }
+    
+    .method-info {
+      flex: 1;
+    }
+    
+    .method-title {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text);
+    }
+    
+    .method-desc {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    
+    .method-icon {
+      width: 32px;
+      height: 32px;
+      margin-left: 12px;
+      opacity: 0.6;
+    }
+    
+    .btn-checkout {
+      width: 100%;
+      height: 56px;
+      background: var(--aba);
+      border: none;
+      border-radius: 14px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 14px rgba(0, 48, 135, 0.25);
+      transition: all 0.25s;
+    }
+    
+    .btn-checkout:hover:not(:disabled) {
+      background: #002569;
+      transform: translateY(-1px);
+    }
+    
+    .btn-checkout:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .loader {
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid rgba(255, 255, 255, 0.2);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .security-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 24px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    
+    .security-icon {
+      width: 16px;
+      height: 16px;
+      color: var(--green);
+    }
+    
+    @media (max-width: 480px) {
+      .body { padding: 20px; }
+      .header { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>🇰🇭 Secure Payment</h1>
+    <p>Complete your payment with ABA KHQR</p>
+  </div>
+  
+  <div class="body">
+    <!-- Amount Input -->
+    <div class="form-group">
+      <label class="label" for="amount">Amount to Pay</label>
+      <div class="input-group">
+        <input id="amount" type="number" value="1000" min="1" inputmode="numeric" placeholder="0">
+        <span class="currency">KHR</span>
+      </div>
+    </div>
+    
+    <!-- Quick Presets -->
+    <div class="presets">
+      <button class="preset-btn" onclick="setAmount(1000)">1,000</button>
+      <button class="preset-btn" onclick="setAmount(5000)">5,000</button>
+      <button class="preset-btn" onclick="setAmount(10000)">10,000</button>
+      <button class="preset-btn" onclick="setAmount(50000)">50,000</button>
+    </div>
+    
+    <!-- Payment Method Selection -->
+    <div class="payment-methods">
+      <label class="method">
+        <input type="radio" name="payment_method" value="khqr" checked>
+        <div class="method-info">
+          <div class="method-title">KHQR (Quick Response)</div>
+          <div class="method-desc">Scan with ABA Mobile</div>
+        </div>
+        <span class="method-icon">📱</span>
+      </label>
+      <label class="method">
+        <input type="radio" name="payment_method" value="abapay">
+        <div class="method-info">
+          <div class="method-title">ABA Pay</div>
+          <div class="method-desc">Mobile wallet payment</div>
+        </div>
+        <span class="method-icon">💳</span>
+      </label>
+    </div>
+    
+    <!-- Checkout Button -->
+    <button id="checkoutBtn" class="btn-checkout" onclick="proceedToCheckout()">
+      <span id="btnLabel">Generate Payment</span>
+    </button>
+    
+    <!-- Security Badge -->
+    <div class="security-badge">
+      <span class="security-icon">✓</span>
+      Secured by ABA Bank · 256-bit SSL Encryption
+    </div>
+  </div>
+</div>
+
+<!-- ABA Checkout Script -->
+<script src="/static/aba-checkout.min.js?hide-close=0"></script>
+
+<script>
+function setAmount(value) {
+  document.getElementById('amount').value = value;
+}
+
+async function proceedToCheckout() {
+  const amountInput = document.getElementById('amount');
+  const amount = parseFloat(amountInput.value);
+  const btn = document.getElementById('checkoutBtn');
+  const btnLabel = document.getElementById('btnLabel');
+  const method = document.querySelector('input[name="payment_method"]:checked').value;
+  
+  if (!amount || amount <= 0) {
+    alert('Please enter a valid amount');
+    return;
+  }
+  
+  btn.disabled = true;
+  btnLabel.innerHTML = '<span class="loader"></span> Processing…';
+  
+  try {
+    // Generate KHQR from backend (using Anajak API)
+    const response = await fetch('/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount })
+    });
+    
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to generate payment');
+    }
+    
+    // Prepare checkout data
+    const checkoutData = {
+      form_url: 'https://checkout.payway.com.kh',
+      merchant_id: 'MERCHANT_ID', // Replace with your merchant ID
+      tran_id: data.tran_id,
+      client_id: data.client_id,
+      amount: amount.toString(),
+      currency: 'KHR',
+      payment_option: method === 'khqr' ? 'abapay_khqr' : 'abapay',
+      onSuccess: function(result) {
+        console.log('Payment successful:', result);
+        alert('Payment completed successfully!');
+        window.location.href = '/success?tran_id=' + data.tran_id;
+      },
+      onError: function(error) {
+        console.log('Payment error:', error);
+        alert('Payment failed. Please try again.');
+      }
+    };
+    
+    // Trigger ABA checkout
+    AbaPayway.checkout(checkoutData);
+    
+  } catch (error) {
+    console.error('Checkout error:', error);
+    alert('Error: ' + error.message);
+  } finally {
+    btn.disabled = false;
+    btnLabel.textContent = 'Generate Payment';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('amount').focus();
+});
+</script>
+
+</body>
+</html>
