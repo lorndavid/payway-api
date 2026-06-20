@@ -299,8 +299,8 @@ body {
   cursor: pointer; transition: var(--transition);
 }
 .btn-cancel:hover { border-color: #94a3b8; color: var(--text); background: #f8fafc; }
-.qr-hint { font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; font-weight: 500; }
-
+.qr-hint { font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; font-weight: 500; }  .qr-actions-mobile { display: grid; }
+  .qr-raw { font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace; }
 /* ════════════════════════════════
    SUCCESS SCREEN SPECIFICS
 ════════════════════════════════ */
@@ -449,6 +449,15 @@ body {
       <div class="qr-body">
         <div class="qr-frame" id="qr-frame">
           <!-- QR injected here -->
+        </div>
+
+        <div id="qr-actions-mobile" class="qr-actions-mobile" style="display:none; margin-top: 18px; gap: 12px; grid-template-columns: repeat(2, 1fr);">
+          <button class="btn-dl" type="button" onclick="openKHQR()">Open in ABA Mobile</button>
+          <button class="btn-cancel" type="button" onclick="copyKHQR()">Copy KHQR Text</button>
+        </div>
+
+        <div id="qr-raw" class="qr-raw" style="display:none; margin-top: 16px; padding: 14px 16px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 12px; line-height: 1.5; color: #334155; word-break: break-all;">
+          <strong style="display:block; margin-bottom:8px; color:#0f172a;">KHQR String</strong>
         </div>
 
         <div class="khqr-divider">
@@ -606,6 +615,7 @@ async function generateQR() {
       tranId:    data.tran_id,
       clientId:  data.client_id,
       qrUrl:     data.qr_url  || null,
+      qrString:  data.qr_string || null,
       expireSec: data.expire_in_sec || 180
     };
     tranId   = data.tran_id;
@@ -625,6 +635,7 @@ async function generateQR() {
     badge.innerHTML = '<span class="blink-dot"></span> Waiting for payment…';
 
     show('qr-screen');
+    updateKHQRActions();
     startTimer(pay.expireSec);
     startStream();
     ok = true;
@@ -646,6 +657,53 @@ async function generateQR() {
       lbl.textContent = 'Generate KHQR';
       inp.disabled = false;
     }
+  }
+}
+
+function updateKHQRActions() {
+  const actions = document.getElementById('qr-actions-mobile');
+  const raw = document.getElementById('qr-raw');
+
+  if (!actions || !raw) return;
+
+  if (pay.qrString) {
+    actions.style.display = 'grid';
+    raw.style.display = 'block';
+    raw.innerHTML = `<strong style="display:block; margin-bottom:8px; color:#0f172a;">KHQR String</strong>${pay.qrString}`;
+  } else {
+    actions.style.display = 'none';
+    raw.style.display = 'none';
+  }
+}
+
+function openKHQR() {
+  if (!pay.qrString) return alert('KHQR string is unavailable.');
+
+  const link = document.createElement('a');
+  link.href = pay.qrString;
+  link.target = '_self';
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+async function copyKHQR() {
+  if (!pay.qrString) return alert('KHQR string is unavailable.');
+
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(pay.qrString);
+      alert('KHQR text copied to clipboard');
+      return;
+    }
+  } catch (error) {
+    console.error('Copy failed', error);
+  }
+
+  const fallback = prompt('Copy the KHQR text manually:', pay.qrString);
+  if (fallback !== null) {
+    alert('KHQR text is shown above for manual copy.');
   }
 }
 
